@@ -1,0 +1,16 @@
+# prometheus.yml
+global:
+  scrape_interval: 5s # How frequently Prometheus will scrape targets.
+
+scrape_configs:
+  - job_name: "user-service"
+    metrics_path: /metrics # The endpoint where User Service exposes its metrics
+    static_configs:
+      - targets: ["user-service:3000"] # Docker Compose service name and port
+
+
+  # We could add product-service here if it also exposed metrics.
+  # - job_name: 'product-service'
+  #   metrics_path: /metrics
+  #   static_configs:
+  #     - targets: ['product-service:3001']

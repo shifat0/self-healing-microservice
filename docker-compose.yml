@@ -1,0 +1,106 @@
+# docker-compose.yml
+version: "3.8"
+
+services:
+  # User Service definition (already existing)
+  user-service:
+    build: ./user-service
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    environment:
+      - CB_FAILURE_THRESHOLD=2
+      - CB_RESET_TIMEOUT_MS=5000
+      - CB_HALF_OPEN_TEST_COUNT=1
+      - RETRY_ATTEMPTS=3
+      - RETRY_INITIAL_DELAY_MS=100
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Product Service definition (already existing)
+  product-service:
+    build: ./product-service
+    ports:
+      - "3001:3001"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # --- NEW SERVICES: Prometheus and Grafana ---
+
+  # Prometheus Service
+  prometheus:
+    image: prom/prometheus:v2.47.0 # Using a stable version of Prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090" # Prometheus web UI will be accessible on your host at port 9090
+    networks:
+      - app-network
+    volumes:
+      # Mount our custom Prometheus configuration file
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command: --config.file=/etc/prometheus/prometheus.yml # Specify the config file to use
+    depends_on:
+      user-service:
+        condition: service_healthy # Ensure user-service is healthy before Prometheus starts scraping
+      product-service:
+        condition: service_healthy # Ensure product-service is healthy
+    healthcheck: # Basic health check for Prometheus itself
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--timeout=1",
+          "http://localhost:9090/-/ready",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Grafana Service
+  grafana:
+    image: grafana/grafana:10.1.5 # Using a stable version of Grafana
+    container_name: grafana
+    ports:
+      - "3002:3000" # Grafana's default UI port is 3000, mapped to your host's port 3002
+    networks:
+      - app-network
+    volumes:
+      - grafana-data:/var/lib/grafana # Persistent storage for Grafana data (dashboards, config)
+    depends_on:
+      prometheus:
+        condition: service_healthy # Ensure Prometheus is healthy before Grafana tries to connect
+    healthcheck: # Basic health check for Grafana itself
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--timeout=1",
+          "http://localhost:3000/api/health",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+# Define a named volume for Grafana's persistent data
+volumes:
+  grafana-data:
+
+# Define the custom network shared by all services
+networks:
+  app-network:
+    driver: bridge
