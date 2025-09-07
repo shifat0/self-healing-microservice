@@ -1,10 +1,10 @@
-# docker-compose.yml
 version: "3.8"
 
 services:
-  # User Service definition (already existing)
+  # User Service (NestJS)
   user-service:
     build: ./user-service
+    container_name: user-service
     ports:
       - "3000:3000"
     networks:
@@ -22,9 +22,10 @@ services:
       retries: 3
       start_period: 30s
 
-  # Product Service definition (already existing)
+  # Product Service (Go)
   product-service:
     build: ./product-service
+    container_name: product-service
     ports:
       - "3001:3001"
     networks:
@@ -36,26 +37,36 @@ services:
       retries: 3
       start_period: 30s
 
-  # --- NEW SERVICES: Prometheus and Grafana ---
-
-  # Prometheus Service
-  prometheus:
-    image: prom/prometheus:v2.47.0 # Using a stable version of Prometheus
-    container_name: prometheus
+  # Remediator
+  remediator:
+    build: ./remediator
+    container_name: remediator
     ports:
-      - "9090:9090" # Prometheus web UI will be accessible on your host at port 9090
+      - "7070:7070"
     networks:
       - app-network
     volumes:
-      # Mount our custom Prometheus configuration file
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    command: --config.file=/etc/prometheus/prometheus.yml # Specify the config file to use
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - app-network
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
     depends_on:
       user-service:
-        condition: service_healthy # Ensure user-service is healthy before Prometheus starts scraping
+        condition: service_healthy
       product-service:
-        condition: service_healthy # Ensure product-service is healthy
-    healthcheck: # Basic health check for Prometheus itself
+        condition: service_healthy
+    healthcheck:
       test:
         [
           "CMD",
@@ -69,20 +80,31 @@ services:
       timeout: 3s
       retries: 5
 
-  # Grafana Service
-  grafana:
-    image: grafana/grafana:10.1.5 # Using a stable version of Grafana
-    container_name: grafana
+  # Alertmanager (NEW)
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
     ports:
-      - "3002:3000" # Grafana's default UI port is 3000, mapped to your host's port 3002
+      - "9093:9093"
     networks:
       - app-network
     volumes:
-      - grafana-data:/var/lib/grafana # Persistent storage for Grafana data (dashboards, config)
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:10.1.5
+    container_name: grafana
+    ports:
+      - "3002:3000"
+    networks:
+      - app-network
+    volumes:
+      - grafana-data:/var/lib/grafana
     depends_on:
       prometheus:
-        condition: service_healthy # Ensure Prometheus is healthy before Grafana tries to connect
-    healthcheck: # Basic health check for Grafana itself
+        condition: service_healthy
+    healthcheck:
       test:
         [
           "CMD",
@@ -96,11 +118,9 @@ services:
       timeout: 3s
       retries: 5
 
-# Define a named volume for Grafana's persistent data
 volumes:
   grafana-data:
 
-# Define the custom network shared by all services
 networks:
   app-network:
     driver: bridge

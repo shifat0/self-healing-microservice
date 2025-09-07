@@ -203,9 +203,7 @@ export class AppService {
         }
 
         const productFetcher = async () => {
-            const response = await fetch(
-                'http://product-service:3001/products/101',
-            );
+            const response = await fetch('http://localhost:3001/products/101');
             if (!response.ok) {
                 this.logger.warn({
                     message: 'Product service response was not OK.',

@@ -20,15 +20,15 @@ import { LoggerModule } from 'nestjs-pino';
                     },
                 },
                 timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
-                transport:
-                    process.env.NODE_ENV === 'production'
-                        ? undefined
-                        : {
-                              target: 'pino-pretty',
-                              options: {
-                                  colorize: true,
-                              },
-                          },
+                // transport:
+                //     process.env.NODE_ENV === 'production'
+                //         ? undefined
+                //         : {
+                //               target: 'pino-pretty',
+                //               options: {
+                //                   colorize: true,
+                //               },
+                //           },
             },
         }),
     ],
