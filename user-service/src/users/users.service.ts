@@ -4,7 +4,7 @@ import {
     Logger,
 } from '@nestjs/common';
 import { Logger as PinoLogger } from 'pino';
-import { MetricsService } from './metrics.service';
+import { MetricsService } from 'src/metrics.service';
 
 enum CircuitBreakerState {
     CLOSED,
@@ -13,9 +13,9 @@ enum CircuitBreakerState {
 }
 
 @Injectable()
-export class AppService {
+export class UsersService {
     private readonly logger: PinoLogger = new Logger(
-        AppService.name,
+        UsersService.name,
     ) as unknown as PinoLogger;
 
     private readonly retryAttempts: number = 3;
@@ -72,6 +72,7 @@ export class AppService {
             this.resetFailureCount();
             return result;
         } catch (error) {
+            const err = error as Error;
             this.metricsService.retryAttemptsTotal.inc({
                 service: 'product-service',
             });
@@ -80,13 +81,13 @@ export class AppService {
                 message: `Attempt failed, retrying in ${delay}ms. Retries left: ${retriesLeft}.`,
                 retriesLeft,
                 delay,
-                error: error.message,
+                error: err.message,
                 component: 'retry',
             });
             if (retriesLeft === 0) {
                 this.logger.error({
                     message: `Max retries reached. Failed to execute function.`,
-                    error: error.message,
+                    error: err.message,
                     component: 'retry',
                 });
                 throw error;
@@ -192,8 +193,12 @@ export class AppService {
         return true;
     }
 
+    create() {
+        return 'This action adds a new user';
+    }
+
     // Method to call the Product Service with retry and circuit breaker logic
-    async getRecommendedProduct(): Promise<any> {
+    async getRecommendedProduct(): Promise<Product> {
         this.metricsService.productServiceRequestsTotal.inc();
 
         if (!this.checkCircuit()) {
@@ -215,7 +220,7 @@ export class AppService {
                     `HTTP error! Status: ${response.status} - ${response.statusText}`,
                 );
             }
-            const product = await response.json();
+            const product = (await response.json()) as Product;
             return product;
         };
 
@@ -231,10 +236,11 @@ export class AppService {
             });
             return result;
         } catch (error) {
+            const err = error as Error;
             this.logger.error({
                 message:
                     'Failed to fetch recommended product after multiple retries or circuit open.',
-                error: error.message,
+                error: err.message,
                 component: 'app-service',
             });
             throw new InternalServerErrorException(

@@ -6,14 +6,14 @@ import {
     Req,
     Res,
 } from '@nestjs/common';
-import { AppService } from './app.service';
-import { MetricsService } from './metrics.service';
+import { UsersService } from './users.service';
+import { MetricsService } from 'src/metrics.service';
 import type { Request, Response } from 'express';
 
-@Controller()
-export class AppController {
+@Controller('users')
+export class UsersController {
     constructor(
-        private readonly appService: AppService,
+        private readonly usersService: UsersService,
         private readonly metricsService: MetricsService,
     ) {}
 
@@ -39,7 +39,7 @@ export class AppController {
     }
 
     // Endpoint to get user details by ID
-    @Get('users/:id')
+    @Get('/:id')
     async getUser(
         @Param('id') id: string,
         @Req() req: Request,
@@ -47,7 +47,7 @@ export class AppController {
     ): Promise<any> {
         try {
             await this.recordHttpRequest(req, res, () => {
-                const user = this.appService.getUserById(id);
+                const user = this.usersService.getUserById(id);
                 if (!user) {
                     throw new NotFoundException('User not found');
                 }
@@ -61,9 +61,9 @@ export class AppController {
 
     // New endpoint to get user details along with a recommended product
     // This demonstrates inter-service communication
-    @Get('users/:id/recommendation')
+    @Get('/:id/recommendation')
     async getUserWithRecommendation(@Param('id') id: string): Promise<any> {
-        const user = this.appService.getUserById(id);
+        const user = this.usersService.getUserById(id);
         if (!user) {
             throw new NotFoundException(`User with ID ${id} not found.`);
         }
@@ -72,7 +72,7 @@ export class AppController {
             // Call the Product Service internally.
             // 'product-service' is the hostname provided by Docker Compose's internal DNS.
             const recommendedProduct =
-                await this.appService.getRecommendedProduct();
+                await this.usersService.getRecommendedProduct();
             return {
                 user,
                 recommendedProduct,
