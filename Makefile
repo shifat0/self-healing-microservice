@@ -1,18 +1,21 @@
 .PHONY: start stop restart build logs ps
 
+DOCKER := $(shell if command -v docker-compose >/dev/null 2>&1; then echo docker-compose; else echo "docker compose"; fi)
+
 start:
-	docker-compose up --build -d
+	$(DOCKER) up --build -d
 
 stop:
-	docker-compose down
+	$(DOCKER) down
 
-restart: stop start
+restart:
+	$(DOCKER) down && $(DOCKER) up --build -d
 
 build:
-	docker-compose build
+	$(DOCKER) build
 
 logs:
-	docker-compose logs -f
+	$(DOCKER) logs -f
 
 ps:
-	docker-compose ps
+	$(DOCKER) ps

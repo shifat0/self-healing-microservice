@@ -1,26 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+run_docker() {
+  if command -v docker-compose >/dev/null 2>&1; then
+    docker-compose "$@"
+  else
+    docker compose "$@"
+  fi
+}
+
 CMD=${1:-start}
 
 case "$CMD" in
   start)
-    docker-compose up --build -d
+    run_docker up --build -d
     ;;
   stop)
-    docker-compose down
+    run_docker down
     ;;
   restart)
-    docker-compose down && docker-compose up --build -d
+    run_docker down && run_docker up --build -d
     ;;
   build)
-    docker-compose build --parallel
+    run_docker build --parallel
     ;;
   logs)
-    docker-compose logs -f
+    run_docker logs -f
     ;;
   ps)
-    docker-compose ps
+    run_docker ps
     ;;
   *)
     echo "Usage: $0 {start|stop|restart|build|logs|ps}"
