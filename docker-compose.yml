@@ -5,6 +5,7 @@ services:
   user-service:
     build: ./user-service
     container_name: user-service
+    restart: always
     ports:
       - "3000:3000"
     networks:

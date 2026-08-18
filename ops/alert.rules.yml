@@ -3,7 +3,7 @@ groups:
     interval: 15s
     rules:
       - alert: ServiceDown
-        expr: up == 0
+        expr: up{job=~"user-service|product-service"} == 0
         for: 15s
         labels:
           severity: heal
