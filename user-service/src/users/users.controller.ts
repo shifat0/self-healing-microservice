@@ -44,14 +44,6 @@ export class UsersController {
         return 'User Service is healthy!';
     }
 
-    @Get('metrics')
-    async getPrometheusMetrics(
-        @Res({ passthrough: true }) res: Response,
-    ): Promise<string> {
-        res.set('Content-Type', this.metricsService.register.contentType);
-        return await this.metricsService.getMetrics();
-    }
-
     // Endpoint to get user details by ID
     @Get('/:id')
     async getUser(

@@ -11,9 +11,9 @@ import (
 
 // Product represents a product in our system
 type Product struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	ID          int     `json:"id"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
 	Price       float64 `json:"price"`
 }
 
@@ -60,10 +60,20 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Product Service is healthy!\n")
 }
 
+// metricsHandler exposes a minimal Prometheus-compatible metrics endpoint.
+func metricsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; version=0.7.0; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, "# HELP product_service_up Whether the product service is running.\n")
+	fmt.Fprint(w, "# TYPE product_service_up gauge\n")
+	fmt.Fprint(w, "product_service_up 1\n")
+}
+
 func main() {
 	// Register handlers for different routes
 	http.HandleFunc("/products/", getProductHandler) // Specific route for products with ID
-	http.HandleFunc("/health", healthCheckHandler) // Health check endpoint
+	http.HandleFunc("/health", healthCheckHandler)   // Health check endpoint
+	http.HandleFunc("/metrics", metricsHandler)      // Prometheus metrics endpoint
 
 	// Start the HTTP server on port 3001
 	port := ":3001"
